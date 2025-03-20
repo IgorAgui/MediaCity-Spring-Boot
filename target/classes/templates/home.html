@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Media City</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .post-image { max-height: 500px; object-fit: cover; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; }
+        .delete-btn { opacity: 0.7; transition: opacity 0.3s; }
+        .delete-btn:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="#">Media City</a>
+        <div class="d-flex align-items-center">
+            <img th:src="@{'/uploads/' + ${user.photo}}" class="avatar me-2">
+            <span th:text="${user.username}"></span>
+            <a href="/logout" class="btn btn-link ms-3">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Create Post -->
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-body">
+            <form th:action="@{/home/post}" method="post" enctype="multipart/form-data">
+                <textarea name="description" class="form-control mb-3"
+                          placeholder="O que você está pensando?" rows="3"></textarea>
+                <input type="file" name="photo" class="form-control mb-3" accept="image/*">
+                <button type="submit" class="btn btn-primary">Publicar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Posts -->
+    <div th:each="post : ${posts}" class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <img th:src="@{'/uploads/' + ${post.user.photo}}" class="avatar me-2">
+                    <div>
+                        <h6 th:text="${post.user.username}"></h6>
+                        <small class="text-muted"
+                               th:text="${#temporals.format(post.creationDate, 'dd/MM/yyyy ''às'' HH:mm')}"></small>
+                    </div>
+                </div>
+                <!-- Botão de excluir post -->
+                <form th:if="${post.user.id == user.id}"
+                      th:action="@{'/home/post/delete/' + ${post.id}}"
+                      method="post">
+                    <button type="submit" class="btn btn-danger btn-sm delete-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+
+            <p th:text="${post.description}"></p>
+            <img th:if="${post.photo}" th:src="@{'/uploads/' + ${post.photo}}"
+                 class="img-fluid post-image mb-3">
+
+            <div class="d-flex gap-3">
+                <form th:action="@{'/home/like/' + ${post.id}}" method="post">
+                    <button type="submit" class="btn btn-link text-decoration-none">
+                        <i class="fas fa-heart"></i>
+                        <span th:text="${@likeService.countLikes(post)}">0</span>
+                    </button>
+                </form>
+
+                <button class="btn btn-link text-decoration-none"
+                        data-bs-toggle="modal"
+                        data-bs-target="#postModal"
+                        th:attr="data-bs-postid=${post.id}">
+                    <i class="fas fa-comment"></i>
+                    <span th:text="${#lists.size(post.comments)}">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="postModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-body" id="modalContent">
+                <!-- Conteúdo carregado via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var modal = document.getElementById('postModal');
+        modal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget;
+            var postId = button.getAttribute('data-bs-postid');
+
+            fetch('/home/post/' + postId)
+                .then(response => {
+                    if (!response.ok) throw new Error('Erro ao carregar');
+                    return response.text();
+                })
+                .then(html => {
+                    document.getElementById('modalContent').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    });
+</script>
+</body>
+</html>
